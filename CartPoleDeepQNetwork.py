@@ -7,7 +7,7 @@ import gym
 from gym import wrappers, logger
 
 import matplotlib.pyplot as plt
-
+import random
 
 class Buffer():
     def __init__(self, buffer_size):
@@ -33,6 +33,9 @@ class Buffer():
 
             self.dict.pop(t)
 
+    def get_mini_batch(self, size_of_sample):
+         return random.sample(self.dict.keys(), min([len(self.dict), size_of_sample]))
+
 
 class RandomAgent(object):
     """The world's simplest agent!"""
@@ -45,7 +48,9 @@ class RandomAgent(object):
 
     def store_experience(self, state, action, next_state, reward, end_episode):
         self.buffer.register_experience(state, action, next_state, reward, end_episode)
-        
+    
+    def get_mini_batch(self, size_of_sample):
+        return self.buffer.get_mini_batch(size_of_sample)
       
 
 if __name__ == '__main__':
@@ -77,9 +82,10 @@ if __name__ == '__main__':
         reward_sum = 0
         
         while True:
+            zz = agent.get_mini_batch(10)
             if i == 0 and show_first:
-              env.render()
-              time.sleep(0.1)
+                env.render()
+                time.sleep(0.1)
             state = ob
             action = agent.act(ob, reward, done)
             ob, reward, done, _ = env.step(action)
