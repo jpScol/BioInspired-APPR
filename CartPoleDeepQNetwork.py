@@ -2,19 +2,52 @@ import argparse
 import sys
 
 import time
-
+import numpy as np
 import gym
 from gym import wrappers, logger
 
 import matplotlib.pyplot as plt
 
+
+class Buffer():
+    @staticmethod
+    def tuple_are_equals(tuple_a, tuple_b):
+        return tuple_a[1] == tuple_b[1]                 \
+            and tuple_a[3] == tuple_b[3]                \
+            and tuple_a[4] == tuple_b[4]                \
+            and np.array_equal(tuple_a[0], tuple_b[0])  \
+            and np.array_equal(tuple_a[2], tuple_b[2])
+
+    def __init__(self, buffer_size):
+        self.list = []
+        self.buffer_size = buffer_size
+
+    def register_experience(self, state, action, next_state, reward, end_episode):
+        tuple = (state, action, next_state, reward, end_episode)
+
+        for i in range(len(self.list)):
+            if Buffer.tuple_are_equals(self.list[i], tuple):
+                self.list.pop(i)
+                break
+        if len(tuple) == self.buffer_size:
+            self.list.pop(0)
+        
+        self.list.append(tuple)
+
+
 class RandomAgent(object):
     """The world's simplest agent!"""
     def __init__(self, action_space):
         self.action_space = action_space
+        self.buffer = Buffer(100000)
 
     def act(self, observation, reward, done):
         return self.action_space.sample()
+
+    def store_experience(self, state, action, next_state, reward, end_episode):
+        self.buffer.register_experience(state, action, next_state, reward, end_episode)
+        
+      
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=None)
@@ -48,14 +81,13 @@ if __name__ == '__main__':
             if i == 0 and show_first:
               env.render()
               time.sleep(0.1)
+            state = ob
             action = agent.act(ob, reward, done)
             ob, reward, done, _ = env.step(action)
             reward_sum = reward_sum + reward
+            agent.store_experience(state, action, ob, reward, done)
             if done:
                 break
-            # Note there's no env.render() here. But the environment still can open window and
-            # render if asked by env.monitor: it calls env.render('rgb_array') to record video.
-            # Video is not recorded every episode, see capped_cubic_video_schedule for details.
 
         list_of_rewards.append(reward_sum)
 
