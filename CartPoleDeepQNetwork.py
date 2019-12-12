@@ -10,29 +10,29 @@ import matplotlib.pyplot as plt
 
 
 class Buffer():
-    @staticmethod
-    def tuple_are_equals(tuple_a, tuple_b):
-        return tuple_a[1] == tuple_b[1]                 \
-            and tuple_a[3] == tuple_b[3]                \
-            and tuple_a[4] == tuple_b[4]                \
-            and np.array_equal(tuple_a[0], tuple_b[0])  \
-            and np.array_equal(tuple_a[2], tuple_b[2])
-
     def __init__(self, buffer_size):
-        self.list = []
+        self.dict = {}
         self.buffer_size = buffer_size
+        self.insert_number = 0
 
     def register_experience(self, state, action, next_state, reward, end_episode):
-        tuple = (state, action, next_state, reward, end_episode)
+        tuple = (state.tobytes(), action, next_state.tobytes(), reward, end_episode)
 
-        for i in range(len(self.list)):
-            if Buffer.tuple_are_equals(self.list[i], tuple):
-                self.list.pop(i)
-                break
-        if len(tuple) == self.buffer_size:
-            self.list.pop(0)
-        
-        self.list.append(tuple)
+        if tuple in self.dict:
+            self.dict[tuple] = self.insert_number
+
+        self.insert_number = self.insert_number + 1
+
+        if len(self.dict) == self.buffer_size:
+            to_remove = None
+            to_remove_time = 0
+
+            for t in self.dict:
+                if to_remove is None or self.dict[t] < to_remove_time:
+                    to_remove = t
+                    to_remove_time = self.dict[t]
+
+            self.dict.pop(t)
 
 
 class RandomAgent(object):
