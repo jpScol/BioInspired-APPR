@@ -3,5 +3,5 @@
 
 ## Environnement virtuel
 - instalation : `python3.6 -m  venv .`
-- activation : `/bin/activate`
+- activation : `source /bin/activate`
 - desactivation : `deactivate`
