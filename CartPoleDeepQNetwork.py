@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
     def show_evolution_of_rewards(list_of_rewards):
         x = [i + 1 for i in range(len(list_of_rewards))]
-        plt.scatter(x, list_of_rewards)
+        plt.plot(x, list_of_rewards)
         plt.title("Evolution de la somme des récompenses")
         plt.xlabel("Numéro de l'épisode")
         plt.ylabel("Somme des récompenses")
