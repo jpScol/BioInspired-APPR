@@ -1,6 +1,8 @@
 import argparse
 import sys
 
+import time
+
 import gym
 from gym import wrappers, logger
 
@@ -18,6 +20,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=None)
     parser.add_argument('env_id', nargs='?', default='CartPole-v1', help='Select the environment to run')
     args = parser.parse_args()
+
+    show_first = True
 
     # You can set the level to logger.DEBUG or logger.WARN if you
     # want to change the amount of output.
@@ -41,6 +45,9 @@ if __name__ == '__main__':
         reward_sum = 0
         
         while True:
+            if i == 0 and show_first:
+              env.render()
+              time.sleep(0.1)
             action = agent.act(ob, reward, done)
             ob, reward, done, _ = env.step(action)
             reward_sum = reward_sum + reward
