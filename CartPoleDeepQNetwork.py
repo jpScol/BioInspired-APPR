@@ -18,8 +18,7 @@ class Buffer():
     def register_experience(self, state, action, next_state, reward, end_episode):
         tuple = (state.tobytes(), action, next_state.tobytes(), reward, end_episode)
 
-        if tuple in self.dict:
-            self.dict[tuple] = self.insert_number
+        self.dict[tuple] = self.insert_number
 
         self.insert_number = self.insert_number + 1
 
