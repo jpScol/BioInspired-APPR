@@ -8,12 +8,52 @@ from gym import wrappers, logger
 
 import matplotlib.pyplot as plt
 
-
 import random
 import os
 
+import torch.nn as nn
+
+from collections import OrderedDict
+
+import torch
+
+from enum import Enum
+
+
+# .backward => donne l'erreur
+# on utilise un optimiseur
+
+
+class Network(nn.Module):
+    def __init__(self, sizes):
+        super().__init__()
+
+        d = OrderedDict()
+
+        d['input'] = nn.Linear(sizes[0], sizes[1])
+
+        for i in range(1, len(sizes) - 1):
+            d['relu' + str(i)] = nn.ReLU()
+            d['hidden' + str(i + 1)] = nn.Linear(sizes[i], sizes[i + 1])
+
+        d['softmax'] = nn.Softmax(dim=0)
+
+        self.model = nn.Sequential(d)
+        print(self.model)
+
+
+    def forward(self, x):
+        return self.model(x)
+
 
 class Buffer():
+    # On utilise un buffer qui a une struture similaire à "la liste des derniers fichiers vus"
+    # cad une file dans laquelle les éléments sont uniques (si on essaye d'enfiler un élément
+    # déjà présent, on enlève l'élément et on le remet à la fin de la file)
+
+    # TODO : Est-ce qu'une simple file ne serait pas plus appropriée ? (ie il est valide de
+    # pouvoir sampler plusieurs fois la même expérience)
+
     def __init__(self, buffer_size):
         self.dict = {}
         self.buffer_size = buffer_size
@@ -41,14 +81,49 @@ class Buffer():
          return random.sample(self.dict.keys(), min([len(self.dict), size_of_sample]))
 
 
-class RandomAgent(object):
+class Strategy(Enum):
+    EXPLORE = 0
+    EXPLOIT = 1
+
+EPSILON = 0.4
+
+class NeuralNetworkAgent(object):
     """The world's simplest agent!"""
-    def __init__(self, action_space):
-        self.action_space = action_space
+    def __init__(self, env, extra_layers_size):
+        self.action_space = env.action_space
         self.buffer = Buffer(100000)
+        neural_net_structure = [env.observation_space.shape[0]] + extra_layers_size + [env.action_space.n]
+        self.neural_network = Network(neural_net_structure)
 
     def act(self, observation, reward, done):
-        return self.action_space.sample()
+        strategy = self.get_strategy()
+
+        if strategy == Strategy.EXPLORE:
+            act = self.action_space.sample()
+            print(act)
+            return act
+        else:
+            x = torch.Tensor(observation)
+            qValues = self.neural_network.forward(x)
+
+            print(qValues)
+
+            chosen_action, value = None, None
+
+            for i, action in enumerate(qValues):
+                print(i)
+                current_value = action.item()
+
+                if chosen_action is None or value < current_value:
+                    chosen_action = i
+                    value = current_value
+
+            return chosen_action
+
+
+    def get_strategy(self):
+        rand = random.random()
+        return Strategy.EXPLOIT if rand > EPSILON else Strategy.EXPLORE
 
     def store_experience(self, state, action, next_state, reward, end_episode):
         self.buffer.register_experience(state, action, next_state, reward, end_episode)
@@ -72,7 +147,7 @@ if __name__ == '__main__':
 
     # env = wrappers.Monitor(env, directory=outdir, force=True)
     env.seed(0)
-    agent = RandomAgent(env.action_space)
+    agent = NeuralNetworkAgent(env, [50])
 
     episode_count = 100
     reward = 0
