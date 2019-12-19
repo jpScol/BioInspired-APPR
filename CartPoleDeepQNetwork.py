@@ -19,9 +19,15 @@ import torch
 
 from enum import Enum
 
+# == Auteurs 
+# Julian Bruyat 11706770
+# Jean-Philippe Tisserand 11926733
 
+# DONE : 2.3 Deep Q Learning - Question 6
+
+# TODO : 
 # .backward => donne l'erreur
-# on utilise un optimiseur
+# utiliser un optimiseur
 
 
 class Network(nn.Module):
@@ -100,18 +106,14 @@ class NeuralNetworkAgent(object):
 
         if strategy == Strategy.EXPLORE:
             act = self.action_space.sample()
-            print(act)
             return act
         else:
             x = torch.Tensor(observation)
             qValues = self.neural_network.forward(x)
 
-            print(qValues)
-
             chosen_action, value = None, None
 
             for i, action in enumerate(qValues):
-                print(i)
                 current_value = action.item()
 
                 if chosen_action is None or value < current_value:
