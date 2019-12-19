@@ -9,4 +9,4 @@
 - importation des packages : `pip install -r requirements.txt`
 
 ## TODO
-- faire une courbe pour montrer l'évolution des récompenses : Posssibilité de liser les valeurs. Possibiliter de mettre en ombrage l'intervalle des valeurs moyennées.
+

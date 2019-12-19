@@ -105,12 +105,44 @@ if __name__ == '__main__':
 
     def show_evolution_of_rewards(list_of_rewards):
         if(list_of_rewards != None):
-            x = [i + 1 for i in range(len(list_of_rewards))]
-            plt.plot(x, list_of_rewards)
-            plt.title("Evolution de la somme des récompenses")
-            plt.xlabel("Numéro de l'épisode")
-            plt.ylabel("Somme des récompenses")
-            plt.show()
+            if(type(list_of_rewards[0]) == type([]) and len(list_of_rewards[0]) > 1):
+                #Calcul min
+                minY = []
+                maxY = []
+                meanY = []
+                for i in range(len(list_of_rewards)):
+                    localMin = list_of_rewards[i][0]
+                    localMax = list_of_rewards[i][0]
+                    localMean = 0
+                    
+                    for j in range(len(list_of_rewards[i])):
+                        localMean += list_of_rewards[i][j]
+                        localMin = list_of_rewards[i][j] if list_of_rewards[i][j] < localMin else localMin
+                        localMax = list_of_rewards[i][j] if list_of_rewards[i][j] > localMax else localMax
+
+                    localMean = float(localMean / len(list_of_rewards[i]))                   
+                    meanY.append(localMean)
+                    minY.append(localMin)
+                    maxY.append(localMax)
+                            
+                x = [i + 1 for i in range(len(list_of_rewards))]
+                fig, ax = plt.subplots()
+                ax.plot(x, minY, 'g') 
+                ax.plot(x, maxY, 'b') 
+                ax.plot(x, meanY, 'r') 
+                ax.fill_between(x, minY, maxY, where=maxY >= minY, facecolor='yellow', interpolate=True)
+                plt.title("Evolution de la somme des récompenses")
+                plt.xlabel("Numéro de l'épisode")
+                plt.ylabel("Somme des récompenses")
+                plt.show()
+                		
+            else:
+                x = [i + 1 for i in range(len(list_of_rewards))]
+                plt.plot(x, list_of_rewards)
+                plt.title("Evolution de la somme des récompenses")
+                plt.xlabel("Numéro de l'épisode")
+                plt.ylabel("Somme des récompenses")
+                plt.show()
 
     show_evolution_of_rewards(list_of_rewards)
 
