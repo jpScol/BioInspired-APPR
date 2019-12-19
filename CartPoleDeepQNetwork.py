@@ -7,7 +7,11 @@ import gym
 from gym import wrappers, logger
 
 import matplotlib.pyplot as plt
+
+
 import random
+import os
+
 
 class Buffer():
     def __init__(self, buffer_size):
@@ -84,8 +88,9 @@ if __name__ == '__main__':
         while True:
             zz = agent.get_mini_batch(10)
             if i == 0 and show_first:
-                env.render()
-                time.sleep(0.1)
+            	env.render()
+            	time.sleep(0.1)
+
             state = ob
             action = agent.act(ob, reward, done)
             ob, reward, done, _ = env.step(action)
@@ -99,11 +104,29 @@ if __name__ == '__main__':
     env.close()
 
     def show_evolution_of_rewards(list_of_rewards):
-        x = [i + 1 for i in range(len(list_of_rewards))]
-        plt.plot(x, list_of_rewards)
-        plt.title("Evolution de la somme des récompenses")
-        plt.xlabel("Numéro de l'épisode")
-        plt.ylabel("Somme des récompenses")
-        plt.show()
+		if(list_of_rewards != None):
+
+			if(len(list_of_rewards[0]) > 1):
+				#Calcul min
+				minY = []
+				maxY = []
+				meanY = []
+				localMin = 
+
+				#Calcul max
+				# Calcul moyenne
+				# Plot 3 curbes				
+
+
+
+			else:
+				x = [i + 1 for i in range(len(list_of_rewards))]
+				plt.plot(x, list_of_rewards)
+				plt.title("Evolution de la somme des récompenses")
+				plt.xlabel("Numéro de l'épisode")
+				plt.ylabel("Somme des récompenses")
+				#plt.show()
+				print(len(list_of_rewards))
 
     show_evolution_of_rewards(list_of_rewards)
+
