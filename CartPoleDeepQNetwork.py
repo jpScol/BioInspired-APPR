@@ -42,8 +42,6 @@ class Network(nn.Module):
             d['relu' + str(i)] = nn.ReLU()
             d['hidden' + str(i + 1)] = nn.Linear(sizes[i], sizes[i + 1])
 
-        d['softmax'] = nn.Softmax(dim=0)
-
         self.model = nn.Sequential(d)
         print(self.model)
 
@@ -59,16 +57,14 @@ class Buffer():
         self.index = 0
 
     def register_experience(self, state, action, next_state, reward, end_episode):
-        tuple = (state.tobytes(), action, next_state.tobytes(), reward, end_episode)
+        t = (state.tobytes(), action, next_state.tobytes(), reward, end_episode)
 
         if len(self.queue) < self.buffer_size:
-            self.queue.append(tuple)
-            self.index += 1
+            self.queue.append(t)
         else:
-            self.queue[self.index] = tuple
-            self.index += 1
-
-        self.index = self.index % self.buffer_size
+            self.queue[self.index] = t
+        
+        self.index = (self.index + 1) % self.buffer_size
     
     def get_mini_batch(self, size_of_sample):
          return random.sample(self.queue, min([len(self.queue), size_of_sample]))
@@ -81,12 +77,15 @@ class Strategy(Enum):
 EPSILON = 0.4
 
 class NeuralNetworkAgent(object):
-    """The world's simplest agent!"""
     def __init__(self, env, extra_layers_size):
         self.action_space = env.action_space
         self.buffer = Buffer(100000)
         neural_net_structure = [env.observation_space.shape[0]] + extra_layers_size + [env.action_space.n]
         self.neural_network = Network(neural_net_structure)
+
+        self.loss_fn = torch.nn.MSELoss()
+        learning_rate = 1e-2
+        self.optimizer = torch.optim.Adam(self.neural_network.parameters(), lr=learning_rate)
 
     def act(self, observation, reward, done):
         strategy = self.get_strategy()
@@ -116,10 +115,42 @@ class NeuralNetworkAgent(object):
 
     def store_experience(self, state, action, next_state, reward, end_episode):
         self.buffer.register_experience(state, action, next_state, reward, end_episode)
+        self.learn()
+
+    def learn(self):
+        # OBSERVATOIN = INPUT print(state)
+        # ACTION = print(action) = ID IN OUTPUT LIST
+        # NEXT_STATE = ALMOST DONT CARE print(next_state)
+        # REWARD = print("Reward = " + str(reward))
+
+        sampled_experiences = self.get_mini_batch(50)
+
+        for input, action_id, next_state, reward, end_of_episode in sampled_experiences:
+            qValues = self.neural_network.forward(input)
+
+            expected = qValues[:]
+            expected[action_id] = self.recompute_value(next_state, reward, end_of_episode)
+            self.learn_from_experience(expected, qValues)
+
+    def recompute_value(self, next_state, reward, end_of_episode):
+        rsa = reward
+
+        if end_of_episode:
+           return rsa
+
+        gamma = 0.1
+        
+        return reward + gamma * torch.max(self.neural_network.forward(next_state))
+
+    def learn_from_experience(self, y_pred, y):
+        loss = self.loss_fn(y_pred, y)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
     
     def get_mini_batch(self, size_of_sample):
         return self.buffer.get_mini_batch(size_of_sample)
-      
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=None)
