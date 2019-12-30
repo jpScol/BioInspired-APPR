@@ -53,38 +53,25 @@ class Network(nn.Module):
 
 
 class Buffer():
-    # On utilise un buffer qui a une struture similaire à "la liste des derniers fichiers vus"
-    # cad une file dans laquelle les éléments sont uniques (si on essaye d'enfiler un élément
-    # déjà présent, on enlève l'élément et on le remet à la fin de la file)
-
-    # TODO : Est-ce qu'une simple file ne serait pas plus appropriée ? (ie il est valide de
-    # pouvoir sampler plusieurs fois la même expérience)
-
     def __init__(self, buffer_size):
-        self.dict = {}
         self.buffer_size = buffer_size
-        self.insert_number = 0
+        self.queue = []
+        self.index = 0
 
     def register_experience(self, state, action, next_state, reward, end_episode):
         tuple = (state.tobytes(), action, next_state.tobytes(), reward, end_episode)
 
-        self.dict[tuple] = self.insert_number
+        if len(self.queue) < self.buffer_size:
+            self.queue.append(tuple)
+            self.index += 1
+        else:
+            self.queue[self.index] = tuple
+            self.index += 1
 
-        self.insert_number = self.insert_number + 1
-
-        if len(self.dict) == self.buffer_size:
-            to_remove = None
-            to_remove_time = 0
-
-            for t in self.dict:
-                if to_remove is None or self.dict[t] < to_remove_time:
-                    to_remove = t
-                    to_remove_time = self.dict[t]
-
-            self.dict.pop(t)
-
+        self.index = self.index % self.buffer_size
+    
     def get_mini_batch(self, size_of_sample):
-         return random.sample(self.dict.keys(), min([len(self.dict), size_of_sample]))
+         return random.sample(self.queue, min([len(self.queue), size_of_sample]))
 
 
 class Strategy(Enum):
