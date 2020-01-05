@@ -18,18 +18,16 @@ import random
 #######################################################################################################################
 #### Constants
 
-# Display when the trigger is triggered, which means the network is copied
-TRIGGER_VERBOSE = False
-
-GAMMA = 0.1
-NUMBER_OF_EPISODES = 200
-show_every = 50
-learning_rate = 1e-2
-buffer_size=100000
-batch_size=20
-extra_layers_size=[15, 5]       # For each hidden layer, number of neurons
-trigger_every = 400
-
+TRIGGER_VERBOSE = False           # Display when the trigger is triggered, which means the network is copied
+GAMMA = 0.01                      # qValue refresh
+NUMBER_OF_EPISODES = 200          # Number of episodes (cartpole game played)
+show_every = 20                   # Show the cartpole on screen every show_every iterations. 0 = no display
+learning_rate = 1e-2              # Learning rate of the network
+buffer_size=100000                # Buffer size
+batch_size=32                     # Number of sample extracted
+extra_layers_size=[3]             # For each hidden layer, number of neurons
+trigger_every = batch_size * 10   # Refresh rate of target network
+weight_decay = 0.0001
 
 #######################################################################################################################
 #### Network implementation
@@ -57,7 +55,7 @@ class Network(nn.Module):
         network.model = nn.Sequential(d)
         print(network.model)
         network.loss_fn = torch.nn.MSELoss(reduction='sum')
-        network.optimizer = torch.optim.Adam(network.model.parameters(), lr=learning_rate)
+        network.optimizer = torch.optim.Adam(network.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
         return network
 
@@ -128,7 +126,6 @@ class EpsilonExploration():
             qValues = neural_network.forward(x)
 
             chosen_action, value = None, None
-
             for i, action in enumerate(qValues):
                 current_value = action.item()
 
@@ -201,7 +198,7 @@ class DQNAgent(object):
 
         for input, action_id, next_state, reward, end_of_episode in sampled_experiences:
             qValues_pred = self.neural_network.forward(input)
-            qValues_real = torch.Tensor(qValues_pred) # Copy all the qValues
+            qValues_real = qValues_pred.clone() # Copy all the qValues
 
             expected_qValue = reward
             if not end_of_episode:
