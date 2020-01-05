@@ -18,6 +18,8 @@ import random
 #######################################################################################################################
 #### Constants
 
+# TODO : Use argparse to get the constants / let the user modify them
+
 TRIGGER_VERBOSE = False           # Display when the trigger is triggered, which means the network is copied
 GAMMA = 0.01                      # qValue refresh
 NUMBER_OF_EPISODES = 200          # Number of episodes (cartpole game played)
@@ -29,6 +31,12 @@ extra_layers_size=[3]             # For each hidden layer, number of neurons
 trigger_every = batch_size * 10   # Refresh rate of target network
 weight_decay = 0.0001
 
+ATARI = True                      # True = Breakout , False = Cartpole
+
+if ATARI:
+    extra_layers_size=[100, 20]
+
+
 #######################################################################################################################
 #### Network implementation
 
@@ -36,6 +44,31 @@ weight_decay = 0.0001
 # Raise an error if false when constructing a Network without using a static method
 # We use this because python does not support natively multiple constructors
 NetworkAllowConstruction = False
+
+
+class View(nn.Module):
+    # Source of the View class : https://github.com/pytorch/pytorch/issues/2486#issuecomment-323584952
+    def __init__(self):
+        super(View, self).__init__()
+        self.first_view = True
+
+    def forward(self, x):
+        if self.first_view:
+            print(x.shape)
+            self.first_view = False
+        return x.view(-1) 
+
+class PreProc(nn.Module):
+    def __init__(self):
+        super(PreProc, self).__init__()
+        self.first_view = True
+
+    def forward(self, x):
+        if self.first_view:
+            print(x.unsqueeze(0).shape)
+            self.first_view = False
+        return x.unsqueeze(0)
+
 
 # Linear Neural Network
 class Network(nn.Module):
@@ -46,6 +79,17 @@ class Network(nn.Module):
         network = Network()
 
         d = OrderedDict()
+
+        if ATARI:
+            # TODO : properly pass sizes of the convolutional part
+            d['proc'] = PreProc()
+            d['conv'] = nn.Conv2d(4, 32, 6, 4)
+            d['conv_relu'] = nn.LeakyReLU()
+            d['conv2'] = nn.Conv2d(32, 16, 4, 4)
+            d['conv_relu2'] = nn.LeakyReLU()
+            d['view'] = View()
+            sizes[0] = 1 * 16 * 5 * 5
+
         d['input'] = nn.Linear(sizes[0], sizes[1])
 
         for i in range(1, len(sizes) - 1):
@@ -179,7 +223,8 @@ class DQNAgent(object):
     def __init__(self, env, exploration=EpsilonExploration(epsilon=0), target_update=None):
         self.action_space = env.action_space
         self.buffer = Buffer()
-        neural_net_structure = [env.observation_space.shape[0]] + extra_layers_size + [env.action_space.n]
+        input_shape = torch.sum(torch.Tensor(env.observation_space.shape))
+        neural_net_structure = [int(input_shape.item())] + extra_layers_size + [env.action_space.n]
         self.neural_network = Network.build_initial_network(neural_net_structure)
         self.exploration = exploration
         self.batch_size = batch_size
@@ -223,7 +268,8 @@ def show_evolution_of_rewards(list_of_rewards):
         return
     
     if(type(list_of_rewards[0]) == type([]) and len(list_of_rewards[0]) > 1):
-        #Calcul min
+        # TODO : document how to exploit this part
+        # Display with error margin. Never executed
         minY = []
         maxY = []
         meanY = []
@@ -252,7 +298,6 @@ def show_evolution_of_rewards(list_of_rewards):
         plt.xlabel("Numéro de l'épisode")
         plt.ylabel("Somme des récompenses")
         plt.show()
-                
     else:
         x = [i + 1 for i in range(len(list_of_rewards))]
         plt.plot(x, list_of_rewards)
@@ -263,12 +308,17 @@ def show_evolution_of_rewards(list_of_rewards):
 
 
 if __name__ == '__main__':
-
     logger.set_level(logger.INFO)
 
-    env = gym.make('CartPole-v1')
-    # env = wrappers.Monitor(env, directory=outdir, force=True)
-    env.seed(0)
+    environment_name = 'BreakoutNoFrameskip-v4' if ATARI else 'CartPole-v1'
+
+    env = gym.make(environment_name)
+
+    if ATARI:
+        env = wrappers.AtariPreprocessing(env, scale_obs=True)
+        env = wrappers.FrameStack(env, 4)
+    # env = wrappers.Monitor(env, directory=outdir, force=True) -> For the video
+    env.seed(0) # Ensures the replicability of the experience
 
     #exploration = BoltzmannExploration(tau=0.5)
     exploration = EpsilonExploration(epsilon=0.1)
@@ -288,8 +338,9 @@ if __name__ == '__main__':
 
         while True:
             if show_every != 0 and i % show_every == 0:
-            	env.render()
-            	time.sleep(0.1)
+                env.render()
+                if not ATARI:
+                    time.sleep(0.1)
 
             state = ob
             action = agent.act(ob, reward, done)
