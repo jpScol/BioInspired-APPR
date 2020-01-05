@@ -2,8 +2,9 @@
 
 ## Auteurs
 
-Julian Bruyat 11706770
-Jean-Philippe Tisserand 11926733
+- Julian Bruyat 11706770
+
+- Jean-Philippe Tisserand 11926733
 
 
 ## Environnement virtuel
@@ -87,7 +88,7 @@ Nous exposons ici la somme des récompenses (le nombre de pas avant de perdre)
 avec 200 épisodes, gamma = 0.01, un taux d'apprentissage de 0.01, des samples
 de 32, 3 neurones cachés et une copie du réseau de neurones cible tous les 10 batchs.
 
-![Courbe des récompenses du cartpole](Cartpole.png)
+![Courbe des récompenses du cartpole](CartPolePlot.png)
 
 
 
