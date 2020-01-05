@@ -29,9 +29,9 @@ buffer_size=100000                # Buffer size
 batch_size=32                     # Number of sample extracted
 extra_layers_size=[3]             # For each hidden layer, number of neurons
 trigger_every = batch_size * 10   # Refresh rate of target network
-weight_decay = 0.0001
+weight_decay = 0.001
 
-ATARI = True                      # True = Breakout , False = Cartpole
+ATARI = False                      # True = Breakout , False = Cartpole
 
 if ATARI:
     extra_layers_size=[100, 20]
@@ -110,8 +110,8 @@ class Network(nn.Module):
         network = Network()
 
         network.model = copy.deepcopy(original_network.model)
-        network.loss_fn = torch.nn.MSELoss(reduction='sum')
-        network.optimizer = torch.optim.Adam(network.model.parameters(), lr=learning_rate)
+        network.loss_fn = None   # We don't permit learning on the clone
+        network.optimizer = None # as it is only used as a target network
         
         return network
 
@@ -151,6 +151,9 @@ class Buffer():
             self.index = (self.index + 1) % self.buffer_size
     
     def get_mini_batch(self, size_of_sample):
+        if len(self.queue) < size_of_sample:
+            return []
+
         return random.sample(self.queue, min([len(self.queue), size_of_sample]))
 
 

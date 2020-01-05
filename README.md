@@ -1,18 +1,30 @@
 # TP Apprentissage Profond par Renforcement
 
+L'objectif de ce dépôt est de montrer une utilisation des réseaux neuronaux
+pour implémenter un apprentissage profond par renforcement.
+
+Ce document retrace notre travail, principalement sur le *Cartpole* de gym.
+
+
 ## Auteurs
 
 - Julian Bruyat 11706770
-
 - Jean-Philippe Tisserand 11926733
 
 
 ## Environnement virtuel
-- instalation : `python3.6 -m  venv .`
-- activation : `source /bin/activate`
-- desactivation : `deactivate`
-- exportation des packages : `pip freeze > requirements.txt`
-- importation des packages : `pip install -r requirements.txt`
+
+Il est possible d'installer facilement les dépendances du projet en utilisant
+un environnement virtuel python :
+
+- Installation : `python3.6 -m  venv .`
+- Activation de l'environnement virtuel : `source /bin/activate`
+- Importation des packages : `pip install -r requirements.txt`
+- Desactivation de l'environnement virtuel : `deactivate`
+
+A titre d'information, la commande pour extraire les dépendances est la suivante
+
+- Exportation des packages : `pip freeze > requirements.txt`
 
 ## Préliminaires
 
@@ -23,11 +35,10 @@ proposons un simple script python qui démontre comment en mettre un en oeuvre
 dans `XORLearn.py`.
 
 
-
 ## Partie 1 : CartPole
 
 Le but de cette partie est de créer un agent évoluant dans l'environnement
-*CartPole*.
+*CartPole* proposé par le package *gym* de *python*.
 
 Le CartPole est un jeu où nous contrôlons un chariot sur lequel est posé une
 perche en équilibre. Le but est de déplacer ce chariot à gauche ou à droite
@@ -37,8 +48,9 @@ Le réseau neuronal du CartPole et son exécution sont implémentés dans
 le fichier `DeepQLearning.py`. Il peut être exécuté en exécutant le fichier
 tout en prenant bien soin que la constante `ATARI` soit égale à `False`.
 
-![Vidéo montrant ce qu'est le cartpole](CartPoleVideo.mp4)
-
+<video controls>
+  <source src="CartPoleVideo.mp4" type="video/mp4">
+</video>
 
 ### Buffer
 
@@ -50,7 +62,7 @@ lorsque le nombre d'éléments dépasse la taille du buffer.
 
 ### Stratégie d'exploration
 
-Deux stratégies d'exploration sont implémentées :
+Deux stratégies d'exploration sont implémentées et exploitables :
 - L'Epsilon exploration
 - L'exploration de Boltzmann.
 
@@ -58,12 +70,16 @@ La stratégie d'exploration est passée lors de la construction de l'agent.
 Nous nous sommes focalisés sur l'utilisation de la méthode d'exploration
 epsilon.
 
+
 ## Construction du réseau neuronal
 
 Notre implémentation s'est faite en permettant à l'utilisateur de modifier via
 les hyperparamètres le nombre de neurones dans les couches cachées. Tous les
 hyperparamètres sont placés en haut du code excepté la stratégie d'exploration
 et sont des constants que l'utilisateur peut modifier avant d'exécuter le code.
+
+Il est à noter que l'optimiseur `MSELoss` implémente la formule d'erreur
+demandée dans le sujet. Il nous a donc suffit de calculer l'erreur.
 
 La seule possibilité proposée dans le sujet qui n'est pas implémentée pour le
 CartPole est la mise à jour au cours du temps du réseau de neurones cibles :
@@ -82,14 +98,21 @@ En jouant avec ces hyperparamètres, nous ne sommes pas parvenus à trouver des
 résultats très concluants avec une stabilité du cartpole (nous nous attendions
 à pouvoir survivre en général au moins 30 étapes, contre 20 environ ici)
 
-Nous savons que l'agent apprend car dans des situations courantes,
+Nous savons que l'agent apprend car dans certaines situations,
 il possède un comportement lui permettant de tenir très longtemps, mais
 de nombreuses situations lui échappent.
+
+Nous l'avons analysé comme étant le fait que l'agent a appris à favoriser
+une direction dans la majorité des situations, ce qui n'est pas assez
+précis.
 
 ![Courbe des récompenses du cartpole](CartPolePlot.png)
 
 
 ## Partie 2 : Atari : Breakout (casse brique)
+
+Le code source est également dans le fichier `DeepQLearning.py`. Pour activer le
+*Breakout*, il faut mettre la constante `ATARI` à `True`.
 
 Pour filtrer l'environnement, nous avons utilisé le wrapper `AtariPreprocessing`
 qui effectue toutes les transformations dont nous avons besoin (passage de 4
