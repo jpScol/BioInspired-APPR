@@ -14,8 +14,26 @@ from collections import OrderedDict
 from enum import Enum
 import random
 
+
+#######################################################################################################################
+#### Constants
+
 # Display when the trigger is triggered, which means the network is copied
 TRIGGER_VERBOSE = False
+
+GAMMA = 0.1
+NUMBER_OF_EPISODES = 200
+show_every = 50
+learning_rate = 1e-2
+buffer_size=100000
+batch_size=20
+extra_layers_size=[15, 5]       # For each hidden layer, number of neurons
+trigger_every = 400
+
+
+#######################################################################################################################
+#### Network implementation
+
 
 # Raise an error if false when constructing a Network without using a static method
 # We use this because python does not support natively multiple constructors
@@ -24,7 +42,7 @@ NetworkAllowConstruction = False
 # Linear Neural Network
 class Network(nn.Module):
     @staticmethod
-    def build_initial_network(sizes, learning_rate=1e-2):
+    def build_initial_network(sizes):
         global NetworkAllowConstruction
         NetworkAllowConstruction = True
         network = Network()
@@ -33,13 +51,12 @@ class Network(nn.Module):
         d['input'] = nn.Linear(sizes[0], sizes[1])
 
         for i in range(1, len(sizes) - 1):
-            d['relu' + str(i)] = nn.ReLU()
-            d['hidden' + str(i + 1)] = nn.Linear(sizes[i], sizes[i + 1])
+            d['relu' + str(i)] = nn.LeakyReLU()
+            d['layer' + str(i + 1)] = nn.Linear(sizes[i], sizes[i + 1])
 
         network.model = nn.Sequential(d)
         print(network.model)
-        network.learning_rate = learning_rate
-        network.loss_fn = torch.nn.MSELoss()
+        network.loss_fn = torch.nn.MSELoss(reduction='sum')
         network.optimizer = torch.optim.Adam(network.model.parameters(), lr=learning_rate)
 
         return network
@@ -51,9 +68,8 @@ class Network(nn.Module):
         network = Network()
 
         network.model = copy.deepcopy(original_network.model)
-        network.loss_fn = torch.nn.MSELoss()
-        network.learning_rate = original_network.learning_rate
-        network.optimizer = torch.optim.Adam(network.model.parameters(), lr=original_network.learning_rate)
+        network.loss_fn = torch.nn.MSELoss(reduction='sum')
+        network.optimizer = torch.optim.Adam(network.model.parameters(), lr=learning_rate)
         
         return network
 
@@ -68,11 +84,9 @@ class Network(nn.Module):
     def forward(self, x):
         return self.model(x)
 
-    def learn(self, y_pred, action, expected_qValue):
-        y_expected = y_pred[:]
-        y_expected[action] = expected_qValue
+    def learn(self, qValue, expectedqValues):
+        loss = self.loss_fn(qValue, expectedqValues)
 
-        loss = self.loss_fn(y_pred, y_expected)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
@@ -80,7 +94,7 @@ class Network(nn.Module):
 
 # A list of the last buffer_size experiences
 class Buffer():
-    def __init__(self, buffer_size):
+    def __init__(self, buffer_size=buffer_size):
         self.buffer_size = buffer_size
         self.queue = []
         self.index = 0
@@ -165,11 +179,9 @@ class PeriodicTrigger():
 
 
 class DQNAgent(object):
-    def __init__(self, env, extra_layers_size, buffer_size=100000, batch_size=50,
-                        exploration=EpsilonExploration(epsilon=0.4),
-                        target_update=None):
+    def __init__(self, env, exploration=EpsilonExploration(epsilon=0), target_update=None):
         self.action_space = env.action_space
-        self.buffer = Buffer(buffer_size)
+        self.buffer = Buffer()
         neural_net_structure = [env.observation_space.shape[0]] + extra_layers_size + [env.action_space.n]
         self.neural_network = Network.build_initial_network(neural_net_structure)
         self.exploration = exploration
@@ -188,23 +200,19 @@ class DQNAgent(object):
         sampled_experiences = self.get_mini_batch(self.batch_size)
 
         for input, action_id, next_state, reward, end_of_episode in sampled_experiences:
-            qValues = self.neural_network.forward(input)
-            expected_qValue = self.recompute_value(next_state, reward, end_of_episode)
-            expected_qValue = qValues[action_id].item() - (expected_qValue ** 2)
-            self.neural_network.learn(qValues, action_id, expected_qValue)
+            qValues_pred = self.neural_network.forward(input)
+            qValues_real = torch.Tensor(qValues_pred) # Copy all the qValues
+
+            expected_qValue = reward
+            if not end_of_episode:
+                expected_qValue += GAMMA * torch.max(self.target.forward(next_state))
+
+            qValues_real[action_id] = expected_qValue
+
+            self.neural_network.learn(qValues_pred, qValues_real)
 
             if self.target_update is not None and self.target_update.IsTriggered():
                 self.target = Network.clone_network(self.neural_network)
-    
-    def recompute_value(self, next_state, reward, end_of_episode):
-        rsa = reward
-
-        if end_of_episode:
-           return rsa
-
-        gamma = 0.1
-        
-        return reward + gamma * torch.max(self.target.forward(next_state))
 
     def get_mini_batch(self, size_of_sample):
         return self.buffer.get_mini_batch(size_of_sample)
@@ -258,8 +266,6 @@ def show_evolution_of_rewards(list_of_rewards):
 
 
 if __name__ == '__main__':
-    NUMBER_OF_EPISODES = 500
-    show_every = 50
 
     logger.set_level(logger.INFO)
 
@@ -268,10 +274,8 @@ if __name__ == '__main__':
     env.seed(0)
 
     #exploration = BoltzmannExploration(tau=0.5)
-    exploration = EpsilonExploration(epsilon=0.2)
-    agent = DQNAgent(env=env, extra_layers_size=[5], buffer_size=100000, batch_size=20, exploration=exploration,
-                    target_update=PeriodicTrigger(trigger_every=10000))
-
+    exploration = EpsilonExploration(epsilon=0.1)
+    agent = DQNAgent(env=env, exploration=exploration, target_update=PeriodicTrigger(trigger_every=trigger_every))
 
     list_of_rewards = []
 
